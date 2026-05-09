@@ -118,7 +118,7 @@ def main() -> None:
           f"({a['ontology']['accuracyPct']}%)")
     print(f"{'=' * 60}")
 
-    print("\nNext: python scripts/06_score.py")
+    print("\nNext: python scripts/07_score.py")
 
 
 if __name__ == "__main__":

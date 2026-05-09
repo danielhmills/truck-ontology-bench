@@ -1,4 +1,4 @@
-"""06 - Score the NakedAgent vs OntologyAgent comparison.
+"""07 - Score the NakedAgent vs OntologyAgent comparison.
 
 Inputs:
     outputs/_agent_comparison.json    (produced by the Fabric notebook)
