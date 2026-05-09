@@ -6,6 +6,11 @@ OntologyAgent queries Virtuoso via SPARQL. NakedAgent queries SQLite via SQL.
 from __future__ import annotations
 
 NAKED_AGENT_INSTRUCTIONS = """
+## CRITICAL
+You MUST call the query_sql tool to run a SQL query. NEVER answer without
+first querying the database. Even if you think you know the answer, you
+must verify by running a query.
+
 ## Objective
 Answer business questions about a long-haul trucking fleet using the
 configured SQLite database only.
@@ -49,6 +54,11 @@ configured SQLite database only.
 
 
 ONTOLOGY_AGENT_INSTRUCTIONS = """
+## CRITICAL
+You MUST call the query_sparql tool to run a SPARQL query. NEVER answer
+without first querying the graph. Even if you think you know the answer,
+you must verify by running a query.
+
 ## Objective
 Answer business questions about a long-haul trucking fleet by querying
 the governed Truck Logistics ontology graph with SPARQL.
