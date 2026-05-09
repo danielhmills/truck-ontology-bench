@@ -158,8 +158,10 @@ def _invoke_llm(
     db_path: str,
     sparql_query_fn,
     max_iterations: int = 5,
-) -> str:
+) -> tuple[str, list[str]]:
     """Direct agent loop using the OpenAI client.
+
+    Returns (answer_text, list_of_queries_run).
 
     Preserves reasoning_content in assistant messages so DeepSeek V4
     thinking mode works across multi-turn tool calls.
@@ -181,6 +183,7 @@ def _invoke_llm(
     ]
 
     final_answer = ""
+    queries: list[str] = []
 
     for _ in range(max_iterations):
         # LangChain Anthropic path
@@ -202,18 +205,20 @@ def _invoke_llm(
                 @lc_tool
                 def _t(query: str) -> str:
                     """Run a SPARQL SELECT query against the truck ontology graph."""
+                    queries.append(query)
                     return _run_sparql(query, sparql_query_fn)
             else:
 
                 @lc_tool
                 def _t(query: str) -> str:
                     """Run a SQL query against the trucking fleet database."""
+                    queries.append(query)
                     return _run_sql(query, db_path)
 
             agent = create_tool_calling_agent(client, [_t], prompt)
             executor = AgentExecutor(agent=agent, tools=[_t], max_iterations=max_iterations, verbose=False, handle_parsing_errors=True)
             result = executor.invoke({"input": user_question})
-            return _extract_text(result.get("output", ""))
+            return _extract_text(result.get("output", "")), queries
 
         # OpenAI / custom path
         kwargs: dict = {
@@ -261,6 +266,8 @@ def _invoke_llm(
             except json.JSONDecodeError:
                 query_str = tc.function.arguments
 
+            queries.append(query_str)
+
             if func_name == "query_sparql":
                 result = _run_sparql(query_str, sparql_query_fn)
             else:
@@ -272,7 +279,7 @@ def _invoke_llm(
                 "content": result,
             })
 
-    return final_answer
+    return final_answer, queries
 
 
 # -- Benchmark runner ------------------------------------------------------
@@ -318,19 +325,21 @@ def run_benchmark(
         # NakedAgent (SQL)
         print(f"\n  [NakedAgent]")
         try:
-            naked_answer = _invoke_llm(
+            naked_answer, naked_queries = _invoke_llm(
                 client, model, NAKED_AGENT_INSTRUCTIONS, question,
                 [_SQL_TOOL_SCHEMA], db_path, sparql_query_fn,
                 max_iterations=max_iterations,
             )
         except Exception as exc:
             naked_answer = f"<error: {exc}>"
+            naked_queries = []
         naked_text = _extract_text(naked_answer)
         print(f"    {naked_text[:200]}{'...' if len(naked_text) > 200 else ''}")
 
         naked_ok, naked_matched, naked_missing = evaluate_answer(naked_text, signals)
         row.update({
             "actual_answer_naked": naked_text,
+            "naked_queries": naked_queries,
             "evaluation_judgement_naked": naked_ok,
             "matched_signals_naked": naked_matched,
             "missing_signals_naked": naked_missing,
@@ -343,19 +352,21 @@ def run_benchmark(
         # OntologyAgent (SPARQL)
         print(f"\n  [OntologyAgent]")
         try:
-            ontology_answer = _invoke_llm(
+            ontology_answer, ontology_queries = _invoke_llm(
                 client, model, ONTOLOGY_AGENT_INSTRUCTIONS, question,
                 [_SPARQL_TOOL_SCHEMA], db_path, sparql_query_fn,
                 max_iterations=max_iterations,
             )
         except Exception as exc:
             ontology_answer = f"<error: {exc}>"
+            ontology_queries = []
         ontology_text = _extract_text(ontology_answer)
         print(f"    {ontology_text[:200]}{'...' if len(ontology_text) > 200 else ''}")
 
         ontology_ok, ontology_matched, ontology_missing = evaluate_answer(ontology_text, signals)
         row.update({
             "actual_answer_ontology": ontology_text,
+            "ontology_queries": ontology_queries,
             "evaluation_judgement_ontology": ontology_ok,
             "matched_signals_ontology": ontology_matched,
             "missing_signals_ontology": ontology_missing,
