@@ -182,11 +182,13 @@ def _invoke_llm(
 
                 @lc_tool
                 def _t(query: str) -> str:
+                    """Run a SPARQL SELECT query against the truck ontology graph."""
                     return _run_sparql(query, sparql_query_fn)
             else:
 
                 @lc_tool
                 def _t(query: str) -> str:
+                    """Run a SQL query against the trucking fleet database."""
                     return _run_sql(query, db_path)
 
             agent = create_tool_calling_agent(client, [_t], prompt)
