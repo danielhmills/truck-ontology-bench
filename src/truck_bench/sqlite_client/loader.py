@@ -26,6 +26,11 @@ def load_jsonl_to_sqlite(
     conn = sqlite3.connect(str(db_path))
     conn.execute("PRAGMA journal_mode=WAL")
 
+    # Drop existing tables so re-runs start fresh
+    for entity in parsed.entities:
+        table = _pluralize(_snake(entity.name))
+        conn.execute(f"DROP TABLE IF EXISTS {table}")
+
     ddl = build_create_tables(parsed)
     conn.executescript(ddl)
 
