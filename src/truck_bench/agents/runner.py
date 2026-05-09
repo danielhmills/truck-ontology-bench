@@ -1,8 +1,10 @@
-"""LangChain agent runner — replaces Fabric Data Agent provisioning + notebook.
+"""Agent runner — replaces Fabric Data Agent provisioning + notebook.
 
 Provides two agents (OntologyAgent via SPARQL, NakedAgent via SQL) backed
-by the same LLM. The benchmark loop runs all 18 scenarios and writes
-``_agent_comparison.json`` in the format ``06_score.py`` expects.
+by the same LLM.  Uses the OpenAI Python client directly so that
+``extra_body`` (thinking mode control, custom params) works for
+providers like DeepSeek.  The benchmark loop runs all 18 scenarios and
+writes ``_agent_comparison.json`` in the format ``07_score.py`` expects.
 """
 
 from __future__ import annotations
@@ -13,14 +15,12 @@ import os
 import re
 import sqlite3
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import Any
 
 from .instructions import NAKED_AGENT_INSTRUCTIONS, ONTOLOGY_AGENT_INSTRUCTIONS
 
 
 def _normalize(text: str) -> str:
-    """Fold separators to a single space for token matching."""
     return re.sub(r"[_\-\s/]+", " ", text).lower().strip()
 
 
@@ -28,176 +28,246 @@ def evaluate_answer(
     answer: str,
     signals: list[str],
 ) -> tuple[bool, list[str], list[str]]:
-    """Token-match ontology signals against an agent answer.
-
-    Returns (all_matched, matched_signals, missing_signals).
-    """
     if not signals:
         return True, [], []
-
     norm = _normalize(answer)
     matched = [s for s in signals if _normalize(s) in norm]
     missing = [s for s in signals if s not in matched]
     return len(missing) == 0, matched, missing
 
 
-def _make_sparql_tool(sparql_query_fn):
-    """Create a SPARQL query tool bound to the given client function."""
-    from langchain_core.tools import tool
+# -- Tool implementations --------------------------------------------------
 
-    @tool
-    def query_sparql(query: str) -> str:
-        """Run a SPARQL SELECT query against the truck ontology graph.
-
-        The graph uses these prefixes:
-          PREFIX trucking-ontology: <http://www.openlinksw.com/ontology/trucking-ontology#>
-          PREFIX : <http://demo.openlinksw.com/trucking-ontology-benchmark#>
-
-        Entity classes are trucking-ontology:Terminal, trucking-ontology:Truck, etc.
-        Object properties are camelCase with _id stripped (e.g. trucking-ontology:driver).
-        Data properties are camelCase (e.g. trucking-ontology:truckNumber).
-
-        Args:
-            query: The SPARQL SELECT query string.
-        """
-        try:
-            rows = sparql_query_fn(query)
-            return json.dumps(rows, indent=2, ensure_ascii=False)
-        except Exception as exc:
-            return f"SPARQL error: {exc}"
-
-    return query_sparql
+def _run_sparql(query: str, sparql_query_fn) -> str:
+    try:
+        rows = sparql_query_fn(query)
+        return json.dumps(rows, indent=2, ensure_ascii=False)
+    except Exception as exc:
+        return f"SPARQL error: {exc}"
 
 
-def _make_sql_tool(db_path: str):
-    """Create a SQL query tool bound to the SQLite database."""
-    from langchain_core.tools import tool
-
-    @tool
-    def query_sql(query: str) -> str:
-        """Run a SQL query against the trucking fleet SQLite database.
-
-        The database has 11 tables: terminals, trucks, trailers, drivers,
-        customers, routes, loads, trips, maintenance_events, service_tickets,
-        driver_hos_logs.
-
-        All PKs and FKs follow snake_case naming with _id suffixes
-        (e.g. terminal_id, home_terminal_id).
-
-        Args:
-            query: The SQL SELECT query string.
-        """
-        try:
-            conn = sqlite3.connect(db_path)
-            conn.row_factory = sqlite3.Row
-            cur = conn.execute(query)
-            rows = [dict(r) for r in cur.fetchall()]
-            conn.close()
-            return json.dumps(rows, indent=2, ensure_ascii=False, default=str)
-        except Exception as exc:
-            return f"SQL error: {exc}"
-
-    return query_sql
+def _run_sql(query: str, db_path: str) -> str:
+    try:
+        conn = sqlite3.connect(db_path)
+        conn.row_factory = sqlite3.Row
+        cur = conn.execute(query)
+        rows = [dict(r) for r in cur.fetchall()]
+        conn.close()
+        return json.dumps(rows, indent=2, ensure_ascii=False, default=str)
+    except Exception as exc:
+        return f"SQL error: {exc}"
 
 
-def _create_agent_executor(llm, tool, system_message: str, max_iterations: int = 5):
-    """Build a LangChain tool-calling agent with a single tool."""
-    from langchain.agents import AgentExecutor, create_tool_calling_agent
-    from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+# -- OpenAI tool schemas ----------------------------------------------------
 
-    # Escape curly braces that LangChain would misinterpret as f-string variables
-    escaped = system_message.replace("{", "{{").replace("}", "}}")
+_SPARQL_TOOL_SCHEMA = {
+    "type": "function",
+    "function": {
+        "name": "query_sparql",
+        "description": (
+            "Run a SPARQL SELECT query against the truck ontology graph.\n"
+            "PREFIX trucking-ontology: <http://www.openlinksw.com/ontology/trucking-ontology#>\n"
+            "PREFIX : <http://demo.openlinksw.com/trucking-ontology-benchmark#>\n"
+            "Entity classes: trucking-ontology:Terminal, Truck, Trailer, Driver, Customer, Route, Load, Trip, MaintenanceEvent, ServiceTicket, DriverHOSLog.\n"
+            "Object properties are camelCase with _id stripped (e.g. trucking-ontology:driver).\n"
+            "Data properties are camelCase (e.g. trucking-ontology:truckNumber).\n"
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "The SPARQL SELECT query."},
+            },
+            "required": ["query"],
+        },
+    },
+}
 
-    prompt = ChatPromptTemplate.from_messages(
-        [
-            ("system", escaped),
-            ("human", "{input}"),
-            MessagesPlaceholder(variable_name="agent_scratchpad"),
-        ]
-    )
+_SQL_TOOL_SCHEMA = {
+    "type": "function",
+    "function": {
+        "name": "query_sql",
+        "description": (
+            "Run a SQL query against the trucking fleet SQLite database.\n"
+            "11 tables: terminals, trucks, trailers, drivers, customers, routes, loads, trips, maintenance_events, service_tickets, driver_hos_logs.\n"
+            "All PKs/FKs are snake_case with _id suffixes (e.g. terminal_id, home_terminal_id).\n"
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "The SQL SELECT query."},
+            },
+            "required": ["query"],
+        },
+    },
+}
 
-    agent = create_tool_calling_agent(llm, [tool], prompt)
-    return AgentExecutor(
-        agent=agent,
-        tools=[tool],
-        max_iterations=max_iterations,
-        verbose=False,
-        handle_parsing_errors=True,
-    )
 
+# -- Client + agent loop ---------------------------------------------------
 
-def _build_llm():
-    """Create an LLM from environment variables.
+def _build_client():
+    """Build an OpenAI client from environment variables."""
+    from openai import OpenAI
 
-    Controlled by:
-      LLM_PROVIDER     — openai (default), anthropic, or custom
-      LLM_MODEL_NAME   — model name (default: gpt-4o-mini)
-      LLM_BASE_URL     — override the API base URL (Ollama, vLLM, LiteLLM, etc.)
-
-    For custom providers, uses the OpenAI-compatible chat completions
-    endpoint (most OSS model servers speak this protocol).
-    """
     provider = os.environ.get("LLM_PROVIDER", "openai").lower().strip()
     model = os.environ.get("LLM_MODEL_NAME", "gpt-4o-mini")
     base_url = os.environ.get("LLM_BASE_URL") or None
+    api_key = os.environ.get("OPENAI_API_KEY", "not-needed")
 
-    extra_headers: dict | None = None
-    headers_raw = os.environ.get("LLM_EXTRA_HEADERS")
-    if headers_raw:
-        import json as _json
-        try:
-            extra_headers = _json.loads(headers_raw)
-        except _json.JSONDecodeError:
-            pass
+    if provider in ("openai", "custom"):
+        return (
+            OpenAI(base_url=base_url, api_key=api_key) if base_url else OpenAI(api_key=api_key)
+        ), model
 
     if provider == "anthropic":
+        # Anthropic uses its own client via langchain — keep LangChain path for this one
         from langchain_anthropic import ChatAnthropic
 
         kwargs: dict = {"model": model, "temperature": 0}
         if base_url:
             kwargs["base_url"] = base_url
-        return ChatAnthropic(**kwargs)
+        return ChatAnthropic(**kwargs), model
 
-    # openai or custom (both use OpenAI-compatible API)
-    from langchain_openai import ChatOpenAI
+    return OpenAI(api_key=api_key), model
 
-    kwargs: dict = {"model": model, "temperature": 0}
-    if base_url:
-        kwargs["base_url"] = base_url
-    if provider == "custom":
-        kwargs["openai_api_key"] = os.environ.get("OPENAI_API_KEY", "not-needed")
-    if extra_headers:
-        kwargs["default_headers"] = extra_headers
-    return ChatOpenAI(**kwargs)
 
+def _invoke_llm(
+    client,
+    model: str,
+    system_message: str,
+    user_question: str,
+    tool_schema: list[dict],
+    db_path: str,
+    sparql_query_fn,
+    max_iterations: int = 5,
+) -> str:
+    """Direct agent loop using the OpenAI client.
+
+    Preserves reasoning_content in assistant messages so DeepSeek V4
+    thinking mode works across multi-turn tool calls.
+    """
+    provider = os.environ.get("LLM_PROVIDER", "openai").lower().strip()
+
+    # Build extra_body for providers that need it
+    extra_body: dict = {}
+    extra_raw = os.environ.get("LLM_EXTRA_BODY")
+    if extra_raw:
+        try:
+            extra_body = json.loads(extra_raw)
+        except json.JSONDecodeError:
+            pass
+
+    messages: list[dict] = [
+        {"role": "system", "content": system_message},
+        {"role": "user", "content": user_question},
+    ]
+
+    final_answer = ""
+
+    for _ in range(max_iterations):
+        # LangChain Anthropic path
+        if provider == "anthropic":
+            from langchain_anthropic import ChatAnthropic
+            from langchain.agents import AgentExecutor, create_tool_calling_agent
+            from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+            from langchain_core.tools import tool as lc_tool
+
+            escaped = system_message.replace("{", "{{").replace("}", "}}")
+            prompt = ChatPromptTemplate.from_messages([
+                ("system", escaped),
+                ("human", "{input}"),
+                MessagesPlaceholder(variable_name="agent_scratchpad"),
+            ])
+
+            if "sparql" in str(tool_schema):
+
+                @lc_tool
+                def _t(query: str) -> str:
+                    return _run_sparql(query, sparql_query_fn)
+            else:
+
+                @lc_tool
+                def _t(query: str) -> str:
+                    return _run_sql(query, db_path)
+
+            agent = create_tool_calling_agent(client, [_t], prompt)
+            executor = AgentExecutor(agent=agent, tools=[_t], max_iterations=max_iterations, verbose=False, handle_parsing_errors=True)
+            result = executor.invoke({"input": user_question})
+            return result.get("output", "")
+
+        # OpenAI / custom path
+        kwargs: dict = {
+            "model": model,
+            "messages": messages,
+            "tools": tool_schema,
+        }
+        if extra_body:
+            kwargs["extra_body"] = extra_body
+
+        resp = client.chat.completions.create(**kwargs)
+        choice = resp.choices[0]
+        msg = choice.message
+
+        # Build assistant message, preserving reasoning_content for DeepSeek
+        assistant_msg: dict = {"role": "assistant"}
+        if msg.content:
+            assistant_msg["content"] = msg.content
+        if hasattr(msg, "reasoning_content") and msg.reasoning_content:
+            assistant_msg["reasoning_content"] = msg.reasoning_content
+
+        # Record final answer when the model responds without tool calls
+        if msg.content:
+            final_answer = msg.content
+
+        if not msg.tool_calls:
+            messages.append(assistant_msg)
+            break
+
+        assistant_msg["tool_calls"] = [
+            {
+                "id": tc.id,
+                "type": "function",
+                "function": {"name": tc.function.name, "arguments": tc.function.arguments},
+            }
+            for tc in msg.tool_calls
+        ]
+        messages.append(assistant_msg)
+
+        for tc in msg.tool_calls:
+            func_name = tc.function.name
+            try:
+                args = json.loads(tc.function.arguments)
+                query_str = args.get("query", "")
+            except json.JSONDecodeError:
+                query_str = tc.function.arguments
+
+            if func_name == "query_sparql":
+                result = _run_sparql(query_str, sparql_query_fn)
+            else:
+                result = _run_sql(query_str, db_path)
+
+            messages.append({
+                "role": "tool",
+                "tool_call_id": tc.id,
+                "content": result,
+            })
+
+    return final_answer
+
+
+# -- Benchmark runner ------------------------------------------------------
 
 def run_benchmark(
     *,
     scenarios: list[dict],
     db_path: str,
     sparql_query_fn,
-    llm=None,
     max_iterations: int = 5,
     timeout_seconds: int = 300,
 ) -> dict[str, Any]:
-    """Run all 18 scenarios through both agents.
+    """Run all 18 scenarios through both agents."""
 
-    Returns the ``_agent_comparison.json`` dict.
-    """
-    if llm is None:
-        llm = _build_llm()
+    client, model = _build_client()
 
-    sparql_tool = _make_sparql_tool(sparql_query_fn)
-    sql_tool = _make_sql_tool(db_path)
-
-    ontology_executor = _create_agent_executor(
-        llm, sparql_tool, ONTOLOGY_AGENT_INSTRUCTIONS, max_iterations=max_iterations
-    )
-    naked_executor = _create_agent_executor(
-        llm, sql_tool, NAKED_AGENT_INSTRUCTIONS, max_iterations=max_iterations
-    )
-
-    # Canonical scenarios hash for reproducibility tracking
     scenarios_json = json.dumps(scenarios, sort_keys=True, separators=(",", ":"))
     scenarios_sha256 = hashlib.sha256(scenarios_json.encode()).hexdigest()
 
@@ -224,14 +294,14 @@ def run_benchmark(
             "ontology_signals": signals,
         }
 
-        # NakedAgent
+        # NakedAgent (SQL)
         print(f"\n  [NakedAgent]")
         try:
-            result = naked_executor.invoke(
-                {"input": question},
-                config={"timeout": timeout_seconds},
+            naked_answer = _invoke_llm(
+                client, model, NAKED_AGENT_INSTRUCTIONS, question,
+                [_SQL_TOOL_SCHEMA], db_path, sparql_query_fn,
+                max_iterations=max_iterations,
             )
-            naked_answer = result.get("output", "")
         except Exception as exc:
             naked_answer = f"<error: {exc}>"
         print(f"    {naked_answer[:200]}{'...' if len(naked_answer) > 200 else ''}")
@@ -248,21 +318,19 @@ def run_benchmark(
             if naked_ok:
                 naked_correct += 1
 
-        # OntologyAgent
+        # OntologyAgent (SPARQL)
         print(f"\n  [OntologyAgent]")
         try:
-            result = ontology_executor.invoke(
-                {"input": question},
-                config={"timeout": timeout_seconds},
+            ontology_answer = _invoke_llm(
+                client, model, ONTOLOGY_AGENT_INSTRUCTIONS, question,
+                [_SPARQL_TOOL_SCHEMA], db_path, sparql_query_fn,
+                max_iterations=max_iterations,
             )
-            ontology_answer = result.get("output", "")
         except Exception as exc:
             ontology_answer = f"<error: {exc}>"
         print(f"    {ontology_answer[:200]}{'...' if len(ontology_answer) > 200 else ''}")
 
-        ontology_ok, ontology_matched, ontology_missing = evaluate_answer(
-            ontology_answer, signals
-        )
+        ontology_ok, ontology_matched, ontology_missing = evaluate_answer(ontology_answer, signals)
         row.update({
             "actual_answer_ontology": ontology_answer,
             "evaluation_judgement_ontology": ontology_ok,
@@ -279,7 +347,7 @@ def run_benchmark(
     total = len(scenarios)
     return {
         "runAtUtc": datetime.now(timezone.utc).isoformat(),
-        "scoringMethod": "ontology_signals token match (langchain + virtuoso)",
+        "scoringMethod": "ontology_signals token match (openai client + virtuoso)",
         "scenariosSha256": scenarios_sha256,
         "scenariosPayload": scenarios,
         "agents": {
