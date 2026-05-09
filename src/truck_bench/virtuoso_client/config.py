@@ -38,7 +38,8 @@ class VirtuosoConfig:
             start = Path(__file__).resolve().parent
         _walk_and_load_env(start)
 
-        graph = os.environ.get("VIRTUOSO_GRAPH_URI") or None
+        graph_raw = os.environ.get("VIRTUOSO_GRAPH_URI")
+        graph = graph_raw.strip() if graph_raw else "http://demo.openlinksw.com/trucking-ontology-benchmark/graph"
 
         return cls(
             host=os.environ.get("VIRTUOSO_HOST", "localhost"),

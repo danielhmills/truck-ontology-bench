@@ -71,11 +71,10 @@ def main() -> None:
     print(f"\nClearing graph <{graph_uri}> ...")
     client.clear_graph(graph_uri)
 
-    print(f"\nLoading ontology ({args.ontology.name}) ...")
-    client.load_file(args.ontology, graph_uri)
-
-    print(f"\nLoading data ({args.data.name}) ...")
-    client.load_file(args.data, graph_uri)
+    # Concatenate both TTLs so they load atomically (graph-crud PUT replaces)
+    combined = args.ontology.read_text(encoding="utf-8") + "\n" + args.data.read_text(encoding="utf-8")
+    print(f"\nLoading {args.ontology.name} + {args.data.name} ...")
+    client.load_ttl_graph_crud(combined, graph_uri)
 
     # Verify
     count = client.count_triples(graph_uri)
