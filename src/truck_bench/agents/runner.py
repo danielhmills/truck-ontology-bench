@@ -124,11 +124,37 @@ def _create_agent_executor(llm, tool, system_message: str, max_iterations: int =
 
 
 def _build_llm():
-    """Create a ChatOpenAI LLM from environment variables."""
+    """Create an LLM from environment variables.
+
+    Controlled by:
+      LLM_PROVIDER     — openai (default), anthropic, or custom
+      LLM_MODEL_NAME   — model name (default: gpt-4o-mini)
+      LLM_BASE_URL     — override the API base URL (Ollama, vLLM, LiteLLM, etc.)
+
+    For custom providers, uses the OpenAI-compatible chat completions
+    endpoint (most OSS model servers speak this protocol).
+    """
+    provider = os.environ.get("LLM_PROVIDER", "openai").lower().strip()
+    model = os.environ.get("LLM_MODEL_NAME", "gpt-4o-mini")
+    base_url = os.environ.get("LLM_BASE_URL") or None
+
+    if provider == "anthropic":
+        from langchain_anthropic import ChatAnthropic
+
+        kwargs: dict = {"model": model, "temperature": 0}
+        if base_url:
+            kwargs["base_url"] = base_url
+        return ChatAnthropic(**kwargs)
+
+    # openai or custom (both use OpenAI-compatible API)
     from langchain_openai import ChatOpenAI
 
-    model = os.environ.get("OPENAI_MODEL_NAME", "gpt-4o-mini")
-    return ChatOpenAI(model=model, temperature=0)
+    kwargs = {"model": model, "temperature": 0}
+    if base_url:
+        kwargs["base_url"] = base_url
+    if provider == "custom":
+        kwargs["openai_api_key"] = os.environ.get("OPENAI_API_KEY", "not-needed")
+    return ChatOpenAI(**kwargs)
 
 
 def run_benchmark(

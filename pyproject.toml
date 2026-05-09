@@ -21,6 +21,7 @@ dependencies = [
     "tabulate>=0.9",
     "langchain>=0.3,<0.4",
     "langchain-openai>=0.2,<0.3",
+    "langchain-anthropic>=0.3,<0.4",
     "openai>=1.0",
     "rdflib>=7.0",
 ]
