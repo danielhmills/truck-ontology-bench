@@ -59,8 +59,8 @@ def main() -> None:
     parser.add_argument(
         "--max-iterations",
         type=int,
-        default=5,
-        help="Max LangChain agent tool-calling iterations per question.",
+        default=8,
+        help="Max tool-calling iterations per question.",
     )
     parser.add_argument(
         "--timeout",
