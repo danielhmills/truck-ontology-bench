@@ -141,12 +141,12 @@ def _build_llm():
     model = os.environ.get("LLM_MODEL_NAME", "gpt-4o-mini")
     base_url = os.environ.get("LLM_BASE_URL") or None
 
-    extra = {}
-    extra_raw = os.environ.get("LLM_EXTRA_BODY")
-    if extra_raw:
+    extra_headers: dict | None = None
+    headers_raw = os.environ.get("LLM_EXTRA_HEADERS")
+    if headers_raw:
         import json as _json
         try:
-            extra = _json.loads(extra_raw)
+            extra_headers = _json.loads(headers_raw)
         except _json.JSONDecodeError:
             pass
 
@@ -166,8 +166,8 @@ def _build_llm():
         kwargs["base_url"] = base_url
     if provider == "custom":
         kwargs["openai_api_key"] = os.environ.get("OPENAI_API_KEY", "not-needed")
-    if extra:
-        kwargs["model_kwargs"] = extra
+    if extra_headers:
+        kwargs["default_headers"] = extra_headers
     return ChatOpenAI(**kwargs)
 
 
