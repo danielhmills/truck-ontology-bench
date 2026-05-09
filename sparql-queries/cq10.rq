@@ -1,0 +1,19 @@
+# CQ10: On-time delivery rate.
+# Tests: conditional aggregation via sub-SELECTs (numerator/denominator).
+# NB: this query fails on Fabric GQL (CASE WHEN not supported).
+PREFIX trucking-ontology: <http://www.openlinksw.com/ontology/trucking-ontology#>
+
+SELECT ?total_delivered ?on_time_count
+WHERE {
+  { SELECT (COUNT(*) AS ?total_delivered)
+    WHERE { ?tr a trucking-ontology:Trip ; trucking-ontology:load ?l . ?l a trucking-ontology:Load } }
+  { SELECT (COUNT(*) AS ?on_time_count)
+    WHERE {
+      ?tr a trucking-ontology:Trip ;
+          trucking-ontology:load ?l ;
+          trucking-ontology:actualArrival ?arr .
+      ?l a trucking-ontology:Load ;
+         trucking-ontology:deliveryWindowEnd ?dwe .
+      FILTER(?arr <= ?dwe)
+  } }
+}

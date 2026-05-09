@@ -1,0 +1,15 @@
+# CQ1: How many entity nodes are loaded in the graph?
+# Sanity check — counts all instances of our 11 ontology classes.
+PREFIX : <http://demo.openlinksw.com/trucking-ontology-benchmark#>
+PREFIX trucking-ontology: <http://www.openlinksw.com/ontology/trucking-ontology#>
+
+SELECT (COUNT(DISTINCT ?node) AS ?total_nodes)
+WHERE {
+  ?node a ?type .
+  FILTER(?type IN (
+    trucking-ontology:Terminal, trucking-ontology:Truck, trucking-ontology:Trailer,
+    trucking-ontology:Driver, trucking-ontology:Customer, trucking-ontology:Route,
+    trucking-ontology:Load, trucking-ontology:Trip, trucking-ontology:MaintenanceEvent,
+    trucking-ontology:ServiceTicket, trucking-ontology:DriverHOSLog
+  ))
+}

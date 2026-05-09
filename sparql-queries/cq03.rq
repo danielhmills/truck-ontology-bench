@@ -1,0 +1,14 @@
+# CQ3: Which drivers have logged HOS entries?
+# Tests: Driver <- DriverHOSLog edge traversal.
+PREFIX trucking-ontology: <http://www.openlinksw.com/ontology/trucking-ontology#>
+
+SELECT DISTINCT ?first_name ?last_name ?employee_id
+WHERE {
+  ?log a trucking-ontology:DriverHOSLog ;
+       trucking-ontology:driver ?d .
+  ?d a trucking-ontology:Driver ;
+     trucking-ontology:firstName ?first_name ;
+     trucking-ontology:lastName ?last_name ;
+     trucking-ontology:employeeId ?employee_id .
+}
+LIMIT 20

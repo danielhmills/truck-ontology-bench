@@ -1,0 +1,17 @@
+# CQ11: Trucks that have NEVER had a maintenance event.
+# Tests: FILTER NOT EXISTS anti-join.
+# NB: this query fails on Fabric GQL (NOT EXISTS not supported).
+PREFIX trucking-ontology: <http://www.openlinksw.com/ontology/trucking-ontology#>
+
+SELECT ?truck_number ?make ?model
+WHERE {
+  ?t a trucking-ontology:Truck ;
+     trucking-ontology:truckNumber ?truck_number ;
+     trucking-ontology:make ?make ;
+     trucking-ontology:model ?model .
+  FILTER NOT EXISTS {
+    ?me a trucking-ontology:MaintenanceEvent ;
+        trucking-ontology:truck ?t .
+  }
+}
+LIMIT 25

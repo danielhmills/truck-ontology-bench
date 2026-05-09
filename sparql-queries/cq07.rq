@@ -1,0 +1,14 @@
+# CQ7: Total maintenance spend per truck make.
+# Tests: MaintenanceEvent -> Truck edge + numeric aggregation over a truck attribute.
+PREFIX trucking-ontology: <http://www.openlinksw.com/ontology/trucking-ontology#>
+
+SELECT ?make (SUM(?cost) AS ?total_maintenance_spend)
+WHERE {
+  ?m a trucking-ontology:MaintenanceEvent ;
+     trucking-ontology:truck ?t ;
+     trucking-ontology:costUsd ?cost .
+  ?t a trucking-ontology:Truck ;
+     trucking-ontology:make ?make .
+}
+GROUP BY ?make
+ORDER BY DESC(?total_maintenance_spend)

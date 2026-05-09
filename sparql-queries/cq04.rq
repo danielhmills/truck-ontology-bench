@@ -1,0 +1,16 @@
+# CQ4: For each trip, list the driver, truck, and route together.
+# Tests: 3 edges out of Trip (driver, truck, route) in a single query.
+PREFIX trucking-ontology: <http://www.openlinksw.com/ontology/trucking-ontology#>
+
+SELECT ?trip_number ?driver ?truck ?route
+WHERE {
+  ?tr a trucking-ontology:Trip ;
+      trucking-ontology:tripNumber ?trip_number ;
+      trucking-ontology:driver ?d ;
+      trucking-ontology:truck ?tk ;
+      trucking-ontology:route ?r .
+  ?d a trucking-ontology:Driver ; trucking-ontology:employeeId ?driver .
+  ?tk a trucking-ontology:Truck ; trucking-ontology:truckNumber ?truck .
+  ?r a trucking-ontology:Route ; trucking-ontology:routeName ?route .
+}
+LIMIT 25

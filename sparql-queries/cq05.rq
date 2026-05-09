@@ -1,0 +1,13 @@
+# CQ5: How many loads per customer industry?
+# Tests: Load -> Customer edge with a group-by on a customer attribute.
+PREFIX trucking-ontology: <http://www.openlinksw.com/ontology/trucking-ontology#>
+
+SELECT ?industry (COUNT(?load) AS ?load_count)
+WHERE {
+  ?load a trucking-ontology:Load ;
+        trucking-ontology:customer ?c .
+  ?c a trucking-ontology:Customer ;
+     trucking-ontology:industry ?industry .
+}
+GROUP BY ?industry
+ORDER BY DESC(?load_count)

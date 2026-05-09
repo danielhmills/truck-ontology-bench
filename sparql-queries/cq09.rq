@@ -1,0 +1,15 @@
+# CQ9: Trucks with a service ticket of severity 'critical'.
+# Tests: ServiceTicket -> Truck edge with a property filter on severity.
+PREFIX trucking-ontology: <http://www.openlinksw.com/ontology/trucking-ontology#>
+
+SELECT DISTINCT ?truck_number ?make ?model
+WHERE {
+  ?s a trucking-ontology:ServiceTicket ;
+     trucking-ontology:truck ?t ;
+     trucking-ontology:severity "critical" .
+  ?t a trucking-ontology:Truck ;
+     trucking-ontology:truckNumber ?truck_number ;
+     trucking-ontology:make ?make ;
+     trucking-ontology:model ?model .
+}
+LIMIT 25

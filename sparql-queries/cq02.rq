@@ -1,0 +1,13 @@
+# CQ2: How many trucks call each terminal home?
+# Tests: Truck -> Terminal via homeTerminal with a group-by.
+PREFIX trucking-ontology: <http://www.openlinksw.com/ontology/trucking-ontology#>
+
+SELECT ?terminal_name (COUNT(?truck) AS ?truck_count)
+WHERE {
+  ?truck a trucking-ontology:Truck ;
+         trucking-ontology:homeTerminal ?term .
+  ?term a trucking-ontology:Terminal ;
+        trucking-ontology:name ?terminal_name .
+}
+GROUP BY ?terminal_name
+ORDER BY DESC(?truck_count)

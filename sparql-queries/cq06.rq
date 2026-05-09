@@ -1,0 +1,13 @@
+# CQ6: For each route, count how many trips ran on it.
+# Tests: Trip -> Route aggregation.
+PREFIX trucking-ontology: <http://www.openlinksw.com/ontology/trucking-ontology#>
+
+SELECT ?route_name (COUNT(?trip) AS ?trip_count)
+WHERE {
+  ?trip a trucking-ontology:Trip ;
+        trucking-ontology:route ?r .
+  ?r a trucking-ontology:Route ;
+     trucking-ontology:routeName ?route_name .
+}
+GROUP BY ?route_name
+ORDER BY DESC(?trip_count)

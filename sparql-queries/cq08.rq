@@ -1,0 +1,18 @@
+# CQ8: Hazmat loads and the drivers currently eligible to haul them.
+# Tests: semantic intersection via CONTAINS on endorsement fields.
+# NB: this query fails on Fabric GQL (LIKE not supported).
+PREFIX trucking-ontology: <http://www.openlinksw.com/ontology/trucking-ontology#>
+
+SELECT ?load_number ?driver_id ?first_name ?last_name
+WHERE {
+  ?l a trucking-ontology:Load ;
+     trucking-ontology:loadNumber ?load_number ;
+     trucking-ontology:requiredEndorsements ?re .
+  ?d a trucking-ontology:Driver ;
+     trucking-ontology:employeeId ?driver_id ;
+     trucking-ontology:firstName ?first_name ;
+     trucking-ontology:lastName ?last_name ;
+     trucking-ontology:cdlEndorsements ?ce .
+  FILTER(CONTAINS(?re, "H") && CONTAINS(?ce, "H"))
+}
+LIMIT 25
