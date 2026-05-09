@@ -141,6 +141,15 @@ def _build_llm():
     model = os.environ.get("LLM_MODEL_NAME", "gpt-4o-mini")
     base_url = os.environ.get("LLM_BASE_URL") or None
 
+    extra = {}
+    extra_raw = os.environ.get("LLM_EXTRA_BODY")
+    if extra_raw:
+        import json as _json
+        try:
+            extra = _json.loads(extra_raw)
+        except _json.JSONDecodeError:
+            pass
+
     if provider == "anthropic":
         from langchain_anthropic import ChatAnthropic
 
@@ -152,11 +161,13 @@ def _build_llm():
     # openai or custom (both use OpenAI-compatible API)
     from langchain_openai import ChatOpenAI
 
-    kwargs = {"model": model, "temperature": 0}
+    kwargs: dict = {"model": model, "temperature": 0}
     if base_url:
         kwargs["base_url"] = base_url
     if provider == "custom":
         kwargs["openai_api_key"] = os.environ.get("OPENAI_API_KEY", "not-needed")
+    if extra:
+        kwargs["model_kwargs"] = extra
     return ChatOpenAI(**kwargs)
 
 
