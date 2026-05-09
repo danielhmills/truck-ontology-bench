@@ -62,10 +62,36 @@ class SparqlClient:
         insert = f"INSERT DATA {{ GRAPH <{g}> {{ {escaped} }} }}"
         self.update(insert, timeout=300)
 
+    def load_ttl_graph_crud(self, ttl_text: str, graph_uri: str | None = None) -> None:
+        """Load Turtle via Virtuoso's graph-crud endpoint (HTTP PUT)."""
+        from urllib.parse import quote
+
+        g = graph_uri or self.config.graph_uri
+        if not g:
+            raise ValueError("graph_uri is required")
+
+        url = f"http://{self.config.host}:{self.config.port}/sparql-graph-crud"
+        resp = requests.put(
+            url,
+            params={"graph-uri": g},
+            data=ttl_text.encode("utf-8"),
+            headers={"Content-Type": "text/turtle"},
+            auth=(self.config.user, self.config.password),
+            timeout=300,
+        )
+        resp.raise_for_status()
+
     def load_file(self, path: Path, graph_uri: str | None = None) -> None:
-        """Load a Turtle file into Virtuoso."""
+        """Load a Turtle file into Virtuoso (graph-crud preferred)."""
         ttl = path.read_text(encoding="utf-8")
-        self.load_ttl(ttl, graph_uri)
+        g = graph_uri or self.config.graph_uri
+        try:
+            self.load_ttl_graph_crud(ttl, g)
+            print(f"  loaded via graph-crud: {path.name}")
+        except Exception:
+            print(f"  graph-crud unavailable, falling back to INSERT DATA...")
+            self.load_ttl(ttl, g)
+            print(f"  loaded via INSERT DATA: {path.name}")
 
     def clear_graph(self, graph_uri: str | None = None) -> None:
         """Clear all triples from a named graph (or the default graph)."""
