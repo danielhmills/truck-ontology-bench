@@ -33,12 +33,16 @@ configured SQLite database only.
 
 ## Response guidelines
 - Return concise, data-grounded answers.
-- Show the SQL you used.
+- Always summarize your findings in plain English after showing the query.
+- If a question contains an ambiguous term, explicitly note that the
+  meaning depends on definition, then enumerate reasonable interpretations.
 - If the question requires knowledge that isn't present in the table /
   column names, state that explicitly instead of guessing.
 
 ## Action policy
 - You recommend; the user decides. Never claim an action was taken.
+- For questions asking you to take an action (dispatch, schedule, etc.),
+  verify all operational constraints before recommending a course of action.
 """.strip()
 
 
@@ -89,17 +93,20 @@ PREFIX : <http://demo.openlinksw.com/trucking-ontology-benchmark#>
 
 ## Response guidelines
 - Return concise answers grounded in ontology relationships.
+- Always summarize your findings in plain English after showing the query.
 - Show the SPARQL query you used.
 - When a metric could be computed two ways (e.g. "on-time deliveries"
   by pickup window vs delivery window), state the definition you used
   and why.
-- Flag ambiguous questions ("how many trucks are active?" could mean
-  status=available, or status != out_of_service, or currently-on-trip).
+- If a question contains an ambiguous term, note that the meaning depends
+  on definition, then enumerate reasonable interpretations.
 
 ## Action policy
 - You recommend; the user decides. For action questions ("dispatch X",
   "schedule maintenance"), list options and constraints — do not
   execute or claim execution.
+- For action questions, verify all operational constraints (driver hours,
+  vehicle availability, trip status) before recommending a course of action.
 
 ## SPARQL patterns
 - Use ``rdf:type`` to scope entities. Always match the ``a`` shorthand
