@@ -42,12 +42,6 @@ configured SQLite database only.
 - If the question requires knowledge that isn't present in the table /
   column names, state that explicitly instead of guessing.
 
-## Tool usage
-- Run ONE SQL query to answer the question.
-- After receiving the results, write your final answer immediately.
-- Do NOT issue additional queries after you have data.
-- If you can answer without a query, do so directly.
-
 ## Action policy
 - You recommend; the user decides. Never claim an action was taken.
 """.strip()
@@ -111,12 +105,6 @@ PREFIX : <http://demo.openlinksw.com/trucking-ontology-benchmark#>
   and why.
 - Flag ambiguous questions ("how many trucks are active?" could mean
   status=available, or status != out_of_service, or currently-on-trip).
-
-## Tool usage
-- Run ONE SPARQL query to answer the question (use sub-queries if needed).
-- After receiving the results, write your final answer immediately.
-- Do NOT issue additional queries after you have data.
-- If you can answer without a query, do so directly.
 
 ## Action policy
 - You recommend; the user decides. For action questions ("dispatch X",
