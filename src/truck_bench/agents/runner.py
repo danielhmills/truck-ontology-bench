@@ -21,7 +21,10 @@ from .instructions import NAKED_AGENT_INSTRUCTIONS, ONTOLOGY_AGENT_INSTRUCTIONS
 
 
 def _normalize(text: str) -> str:
-    return re.sub(r"[_\-\s/]+", " ", str(text)).lower().strip()
+    t = str(text).lower()
+    t = re.sub(r"([a-z])([A-Z])", r"\1 \2", t)
+    t = re.sub(r"[_\-\s/]+", " ", t)
+    return re.sub(r"\s+", " ", t).strip()
 
 
 def _extract_text(answer) -> str:
