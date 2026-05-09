@@ -105,9 +105,12 @@ def _create_agent_executor(llm, tool, system_message: str, max_iterations: int =
     from langchain.agents import AgentExecutor, create_tool_calling_agent
     from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
+    # Escape curly braces that LangChain would misinterpret as f-string variables
+    escaped = system_message.replace("{", "{{").replace("}", "}}")
+
     prompt = ChatPromptTemplate.from_messages(
         [
-            ("system", system_message),
+            ("system", escaped),
             ("human", "{input}"),
             MessagesPlaceholder(variable_name="agent_scratchpad"),
         ]
