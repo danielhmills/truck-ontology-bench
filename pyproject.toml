@@ -1,24 +1,28 @@
 [project]
 name = "truck-bench"
 version = "0.1.0"
-description = "Long-haul trucking ontology benchmark in Microsoft Fabric"
+description = "Long-haul trucking ontology benchmark (Virtuoso SPARQL + LangChain)"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
 authors = [{ name = "hzmarrou" }]
 keywords = [
-    "fabric",
-    "microsoft-fabric",
+    "sparql",
+    "virtuoso",
     "ontology",
     "knowledge-graph",
-    "data-agent",
-    "gql",
+    "langchain",
+    "rdf",
     "benchmark",
 ]
 dependencies = [
     "requests>=2.31",
     "python-dotenv>=1.0",
     "tabulate>=0.9",
+    "langchain>=0.3,<0.4",
+    "langchain-openai>=0.2,<0.3",
+    "openai>=1.0",
+    "rdflib>=7.0",
 ]
 
 [project.urls]
