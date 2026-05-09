@@ -158,10 +158,10 @@ def _invoke_llm(
     db_path: str,
     sparql_query_fn,
     max_iterations: int = 5,
-) -> tuple[str, list[str]]:
+) -> tuple[str, list[str], list[str]]:
     """Direct agent loop using the OpenAI client.
 
-    Returns (answer_text, list_of_queries_run).
+    Returns (answer_text, list_of_queries_run, list_of_results).
 
     Preserves reasoning_content in assistant messages so DeepSeek V4
     thinking mode works across multi-turn tool calls.
@@ -184,6 +184,7 @@ def _invoke_llm(
 
     final_answer = ""
     queries: list[str] = []
+    query_results: list[str] = []
 
     for _ in range(max_iterations):
         # LangChain Anthropic path
@@ -206,19 +207,23 @@ def _invoke_llm(
                 def _t(query: str) -> str:
                     """Run a SPARQL SELECT query against the truck ontology graph."""
                     queries.append(query)
-                    return _run_sparql(query, sparql_query_fn)
+                    r = _run_sparql(query, sparql_query_fn)
+                    query_results.append(r)
+                    return r
             else:
 
                 @lc_tool
                 def _t(query: str) -> str:
                     """Run a SQL query against the trucking fleet database."""
                     queries.append(query)
-                    return _run_sql(query, db_path)
+                    r = _run_sql(query, db_path)
+                    query_results.append(r)
+                    return r
 
             agent = create_tool_calling_agent(client, [_t], prompt)
             executor = AgentExecutor(agent=agent, tools=[_t], max_iterations=max_iterations, verbose=False, handle_parsing_errors=True)
             result = executor.invoke({"input": user_question})
-            return _extract_text(result.get("output", "")), queries
+            return _extract_text(result.get("output", "")), queries, query_results
 
         # OpenAI / custom path
         kwargs: dict = {
@@ -273,13 +278,15 @@ def _invoke_llm(
             else:
                 result = _run_sql(query_str, db_path)
 
+            query_results.append(result)
+
             messages.append({
                 "role": "tool",
                 "tool_call_id": tc.id,
                 "content": result,
             })
 
-    return final_answer, queries
+    return final_answer, queries, query_results
 
 
 # -- Benchmark runner ------------------------------------------------------
@@ -325,7 +332,7 @@ def run_benchmark(
         # NakedAgent (SQL)
         print(f"\n  [NakedAgent]")
         try:
-            naked_answer, naked_queries = _invoke_llm(
+            naked_answer, naked_queries, naked_results = _invoke_llm(
                 client, model, NAKED_AGENT_INSTRUCTIONS, question,
                 [_SQL_TOOL_SCHEMA], db_path, sparql_query_fn,
                 max_iterations=max_iterations,
@@ -333,6 +340,7 @@ def run_benchmark(
         except Exception as exc:
             naked_answer = f"<error: {exc}>"
             naked_queries = []
+            naked_results = []
         naked_text = _extract_text(naked_answer)
         print(f"    {naked_text[:200]}{'...' if len(naked_text) > 200 else ''}")
 
@@ -340,6 +348,7 @@ def run_benchmark(
         row.update({
             "actual_answer_naked": naked_text,
             "naked_queries": naked_queries,
+            "naked_results": naked_results,
             "evaluation_judgement_naked": naked_ok,
             "matched_signals_naked": naked_matched,
             "missing_signals_naked": naked_missing,
@@ -352,7 +361,7 @@ def run_benchmark(
         # OntologyAgent (SPARQL)
         print(f"\n  [OntologyAgent]")
         try:
-            ontology_answer, ontology_queries = _invoke_llm(
+            ontology_answer, ontology_queries, ontology_results = _invoke_llm(
                 client, model, ONTOLOGY_AGENT_INSTRUCTIONS, question,
                 [_SPARQL_TOOL_SCHEMA], db_path, sparql_query_fn,
                 max_iterations=max_iterations,
@@ -360,6 +369,7 @@ def run_benchmark(
         except Exception as exc:
             ontology_answer = f"<error: {exc}>"
             ontology_queries = []
+            ontology_results = []
         ontology_text = _extract_text(ontology_answer)
         print(f"    {ontology_text[:200]}{'...' if len(ontology_text) > 200 else ''}")
 
@@ -367,6 +377,7 @@ def run_benchmark(
         row.update({
             "actual_answer_ontology": ontology_text,
             "ontology_queries": ontology_queries,
+            "ontology_results": ontology_results,
             "evaluation_judgement_ontology": ontology_ok,
             "matched_signals_ontology": ontology_matched,
             "missing_signals_ontology": ontology_missing,
