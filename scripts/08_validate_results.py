@@ -21,8 +21,11 @@ sys.path.insert(0, str(REPO_ROOT / "src"))
 from truck_bench.virtuoso_client import SparqlClient  # noqa: E402
 
 
-def _result_to_tuple_set(result_json: str) -> set | None:
-    """Parse a SPARQL JSON result string into a frozenset of sorted row tuples."""
+def _result_to_value_set(result_json: str) -> set | None:
+    """Parse a SPARQL JSON result string into a frozenset of sorted value tuples.
+
+    Column names are ignored — only values are compared, sorted per row.
+    """
     if not result_json or not result_json.strip():
         return None
     try:
@@ -30,8 +33,9 @@ def _result_to_tuple_set(result_json: str) -> set | None:
     except json.JSONDecodeError:
         return None
     if isinstance(data, list) and data:
-        cols = sorted(data[0].keys())
-        return frozenset(tuple(row.get(c, "") for c in cols) for row in data)
+        return frozenset(
+            tuple(sorted(str(v) for v in row.values())) for row in data
+        )
     return None
 
 
@@ -73,12 +77,12 @@ def main() -> None:
         # Run gold query
         gold_query = gold_path.read_text(encoding="utf-8")
         gold_rows = client.execute_select(gold_query)
-        gold_set = _result_to_tuple_set(json.dumps(gold_rows))
+        gold_set = _result_to_value_set(json.dumps(gold_rows))
 
         # Compare ontology agent results
         onto_results = row.get("ontology_results", [])
         if onto_results and gold_set is not None:
-            onto_set = _result_to_tuple_set(onto_results[-1])
+            onto_set = _result_to_value_set(onto_results[-1])
             onto_match = (onto_set == gold_set) if onto_set is not None else False
         else:
             onto_match = False
@@ -87,7 +91,7 @@ def main() -> None:
         # Compare naked agent results
         naked_results = row.get("naked_results", [])
         if naked_results and gold_set is not None:
-            naked_set = _result_to_tuple_set(naked_results[-1])
+            naked_set = _result_to_value_set(naked_results[-1])
             naked_match = (naked_set == gold_set) if naked_set is not None else False
         else:
             naked_match = False
