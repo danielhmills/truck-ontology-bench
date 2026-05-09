@@ -21,7 +21,26 @@ from .instructions import NAKED_AGENT_INSTRUCTIONS, ONTOLOGY_AGENT_INSTRUCTIONS
 
 
 def _normalize(text: str) -> str:
-    return re.sub(r"[_\-\s/]+", " ", text).lower().strip()
+    return re.sub(r"[_\-\s/]+", " ", str(text)).lower().strip()
+
+
+def _extract_text(answer) -> str:
+    """Extract plain text from various LLM response formats."""
+    if isinstance(answer, str):
+        return answer
+    if isinstance(answer, list):
+        # Anthropic content blocks: [{"type": "text", "text": "..."}, ...]
+        parts = []
+        for block in answer:
+            if isinstance(block, dict):
+                if block.get("type") == "text" and block.get("text"):
+                    parts.append(block["text"])
+                elif block.get("type") == "thinking":
+                    pass  # skip thinking blocks
+            elif isinstance(block, str):
+                parts.append(block)
+        return "\n".join(parts)
+    return str(answer)
 
 
 def evaluate_answer(
@@ -194,7 +213,7 @@ def _invoke_llm(
             agent = create_tool_calling_agent(client, [_t], prompt)
             executor = AgentExecutor(agent=agent, tools=[_t], max_iterations=max_iterations, verbose=False, handle_parsing_errors=True)
             result = executor.invoke({"input": user_question})
-            return result.get("output", "")
+            return _extract_text(result.get("output", ""))
 
         # OpenAI / custom path
         kwargs: dict = {
@@ -306,11 +325,12 @@ def run_benchmark(
             )
         except Exception as exc:
             naked_answer = f"<error: {exc}>"
-        print(f"    {naked_answer[:200]}{'...' if len(naked_answer) > 200 else ''}")
+        naked_text = _extract_text(naked_answer)
+        print(f"    {naked_text[:200]}{'...' if len(naked_text) > 200 else ''}")
 
-        naked_ok, naked_matched, naked_missing = evaluate_answer(naked_answer, signals)
+        naked_ok, naked_matched, naked_missing = evaluate_answer(naked_text, signals)
         row.update({
-            "actual_answer_naked": naked_answer,
+            "actual_answer_naked": naked_text,
             "evaluation_judgement_naked": naked_ok,
             "matched_signals_naked": naked_matched,
             "missing_signals_naked": naked_missing,
@@ -330,11 +350,12 @@ def run_benchmark(
             )
         except Exception as exc:
             ontology_answer = f"<error: {exc}>"
-        print(f"    {ontology_answer[:200]}{'...' if len(ontology_answer) > 200 else ''}")
+        ontology_text = _extract_text(ontology_answer)
+        print(f"    {ontology_text[:200]}{'...' if len(ontology_text) > 200 else ''}")
 
-        ontology_ok, ontology_matched, ontology_missing = evaluate_answer(ontology_answer, signals)
+        ontology_ok, ontology_matched, ontology_missing = evaluate_answer(ontology_text, signals)
         row.update({
-            "actual_answer_ontology": ontology_answer,
+            "actual_answer_ontology": ontology_text,
             "evaluation_judgement_ontology": ontology_ok,
             "matched_signals_ontology": ontology_matched,
             "missing_signals_ontology": ontology_missing,
