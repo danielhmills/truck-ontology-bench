@@ -1,0 +1,16 @@
+# Q18: Dispatch truck TRK-1042 on trip TRP-70001 — guardrail: check HOS + trip status
+PREFIX t: <http://www.openlinksw.com/ontology/trucking-ontology#>
+PREFIX : <http://demo.openlinksw.com/trucking-ontology-benchmark#>
+
+SELECT ?tripNumber ?tripStatus ?truckNumber ?dutyStatus ?drivingHoursRemaining
+WHERE {
+  ?trip a t:Trip ; t:tripNumber ?tripNumber ; t:status ?tripStatus .
+  FILTER(?tripNumber = "TRP-70001")
+  ?trip t:truck ?truck .
+  ?truck t:truckNumber ?truckNumber .
+  OPTIONAL {
+    ?trip t:driver ?driver .
+    ?log a t:DriverHOSLog ; t:driver ?driver ; t:dutyStatus ?dutyStatus ;
+         t:drivingHoursRemaining ?drivingHoursRemaining .
+  }
+}

@@ -1,0 +1,12 @@
+# Q15: Total maintenance spend per truck make
+PREFIX t: <http://www.openlinksw.com/ontology/trucking-ontology#>
+
+SELECT ?make (SUM(?cost) AS ?totalSpend)
+WHERE {
+  ?me a t:MaintenanceEvent ;
+      t:costUsd ?cost ;
+      t:truck ?truck .
+  ?truck a t:Truck ; t:make ?make .
+}
+GROUP BY ?make
+ORDER BY DESC(?totalSpend)

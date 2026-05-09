@@ -1,0 +1,7 @@
+# Q01: How many trucks are currently in status 'maintenance'?
+PREFIX t: <http://www.openlinksw.com/ontology/trucking-ontology#>
+
+SELECT (COUNT(DISTINCT ?truck) AS ?count)
+WHERE {
+  ?truck a t:Truck ; t:status "maintenance" .
+}

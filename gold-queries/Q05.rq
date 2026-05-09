@@ -1,0 +1,13 @@
+# Q05: Which customers have at least one load currently in transit?
+PREFIX t: <http://www.openlinksw.com/ontology/trucking-ontology#>
+
+SELECT DISTINCT ?customerName ?industry
+WHERE {
+  ?load a t:Load ;
+        t:status "in_transit" ;
+        t:customer ?c .
+  ?c a t:Customer ;
+     t:name ?customerName ;
+     t:industry ?industry .
+}
+ORDER BY ?customerName

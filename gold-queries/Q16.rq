@@ -1,0 +1,15 @@
+# Q16: How many trucks are active? — ambiguity: "active" is undefined
+# Return multiple interpretations
+PREFIX t: <http://www.openlinksw.com/ontology/trucking-ontology#>
+
+SELECT ?interpretation ?count WHERE {
+  { BIND("status=available" AS ?interpretation)
+    { SELECT (COUNT(DISTINCT ?t) AS ?count) WHERE { ?t a t:Truck ; t:status "available" } }
+  }
+  UNION
+  { BIND("currently on trip" AS ?interpretation)
+    { SELECT (COUNT(DISTINCT ?t) AS ?count) WHERE {
+      ?trip a t:Trip ; t:status "completed" ; t:truck ?t . ?t a t:Truck .
+    } }
+  }
+}

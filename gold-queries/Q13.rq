@@ -1,0 +1,17 @@
+# Q13: On-time delivery rate (completed trips where actual_arrival <= delivery_window_end)
+PREFIX t: <http://www.openlinksw.com/ontology/trucking-ontology#>
+
+SELECT ?total ?onTime
+WHERE {
+  { SELECT (COUNT(DISTINCT ?trip) AS ?total) WHERE {
+      ?trip a t:Trip ; t:status "completed" ; t:load ?load .
+      ?load a t:Load .
+  }}
+  { SELECT (COUNT(DISTINCT ?trip) AS ?onTime) WHERE {
+      ?trip a t:Trip ; t:status "completed" ;
+            t:actualArrival ?arr ;
+            t:load ?load .
+      ?load a t:Load ; t:deliveryWindowEnd ?dwe .
+      FILTER(?arr <= ?dwe)
+  }}
+}

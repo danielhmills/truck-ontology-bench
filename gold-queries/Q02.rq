@@ -1,0 +1,13 @@
+# Q02: List all drivers whose CDL expires in the next 90 days.
+PREFIX t: <http://www.openlinksw.com/ontology/trucking-ontology#>
+
+SELECT ?firstName ?lastName ?cdlNumber ?cdlExpirationDate
+WHERE {
+  ?d a t:Driver ;
+     t:firstName ?firstName ;
+     t:lastName ?lastName ;
+     t:cdlNumber ?cdlNumber ;
+     t:cdlExpirationDate ?cdlExpirationDate .
+  FILTER(?cdlExpirationDate >= NOW() && ?cdlExpirationDate <= NOW() + "P90D"^^xsd:duration)
+}
+ORDER BY ?cdlExpirationDate

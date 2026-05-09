@@ -1,0 +1,10 @@
+# Q17: Which loads are late? — ambiguity: check both pickup and delivery windows
+PREFIX t: <http://www.openlinksw.com/ontology/trucking-ontology#>
+
+SELECT ?loadNumber ?status ?pickupWindowEnd ?deliveryWindowEnd
+WHERE {
+  ?load a t:Load ; t:loadNumber ?loadNumber ; t:status ?status .
+  OPTIONAL { ?load t:pickupWindowEnd ?pickupWindowEnd }
+  OPTIONAL { ?load t:deliveryWindowEnd ?deliveryWindowEnd }
+}
+ORDER BY ?loadNumber

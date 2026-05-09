@@ -1,0 +1,19 @@
+# Q04: For each trip return the driver name, truck number, trailer number, and route name.
+PREFIX t: <http://www.openlinksw.com/ontology/trucking-ontology#>
+PREFIX : <http://demo.openlinksw.com/trucking-ontology-benchmark#>
+
+SELECT ?tripNumber ?driverName ?truckNumber ?trailerNumber ?routeName
+WHERE {
+  ?trip a t:Trip ;
+        t:tripNumber ?tripNumber ;
+        t:driver ?d ;
+        t:truck ?tk ;
+        t:trailer ?tl ;
+        t:route ?r .
+  ?d t:firstName ?firstName ; t:lastName ?lastName .
+  ?tk t:truckNumber ?truckNumber .
+  ?tl t:trailerNumber ?trailerNumber .
+  ?r t:routeName ?routeName .
+  BIND(CONCAT(?firstName, " ", ?lastName) AS ?driverName)
+}
+ORDER BY ?tripNumber

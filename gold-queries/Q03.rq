@@ -1,0 +1,7 @@
+# Q03: How many loads have status 'delivered'?
+PREFIX t: <http://www.openlinksw.com/ontology/trucking-ontology#>
+
+SELECT (COUNT(DISTINCT ?load) AS ?count)
+WHERE {
+  ?load a t:Load ; t:status "delivered" .
+}

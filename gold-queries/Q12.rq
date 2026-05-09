@@ -1,0 +1,14 @@
+# Q12: Which trucks have NEVER had a maintenance event?
+PREFIX t: <http://www.openlinksw.com/ontology/trucking-ontology#>
+
+SELECT ?truckNumber ?make ?model
+WHERE {
+  ?truck a t:Truck ;
+         t:truckNumber ?truckNumber ;
+         t:make ?make ;
+         t:model ?model .
+  FILTER NOT EXISTS {
+    ?me a t:MaintenanceEvent ; t:truck ?truck .
+  }
+}
+ORDER BY ?truckNumber

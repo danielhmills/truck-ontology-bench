@@ -1,0 +1,12 @@
+# Q09: For each route, how many completed trips ran on it?
+PREFIX t: <http://www.openlinksw.com/ontology/trucking-ontology#>
+
+SELECT ?routeName (COUNT(DISTINCT ?trip) AS ?tripCount)
+WHERE {
+  ?trip a t:Trip ;
+        t:status "completed" ;
+        t:route ?route .
+  ?route a t:Route ; t:routeName ?routeName .
+}
+GROUP BY ?routeName
+ORDER BY DESC(?tripCount)

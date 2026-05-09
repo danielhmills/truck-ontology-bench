@@ -1,0 +1,23 @@
+# Q10: Which drivers have driven trips whose route connects Atlanta to Chicago, in either direction?
+PREFIX t: <http://www.openlinksw.com/ontology/trucking-ontology#>
+
+SELECT DISTINCT ?firstName ?lastName ?employeeId
+WHERE {
+  ?trip a t:Trip ;
+        t:driver ?driver ;
+        t:route ?route .
+  ?driver a t:Driver ;
+          t:firstName ?firstName ;
+          t:lastName ?lastName ;
+          t:employeeId ?employeeId .
+  ?route a t:Route ;
+         t:originTerminal ?origin ;
+         t:destinationTerminal ?dest .
+  ?origin t:city ?originCity .
+  ?dest t:city ?destCity .
+  FILTER(
+    (?originCity = "Atlanta" && ?destCity = "Chicago") ||
+    (?originCity = "Chicago" && ?destCity = "Atlanta")
+  )
+}
+ORDER BY ?lastName ?firstName

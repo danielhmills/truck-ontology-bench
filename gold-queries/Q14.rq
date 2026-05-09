@@ -1,0 +1,15 @@
+# Q14: Average MPG across fleet — not computable from available data (no fuel_gallons field)
+# Return the list of fields available that are related (distance + fuel capacity)
+PREFIX t: <http://www.openlinksw.com/ontology/trucking-ontology#>
+
+SELECT ?tripNumber ?distanceMiles ?fuelCapacityGallons
+WHERE {
+  ?trip a t:Trip ; t:status "completed" ;
+        t:tripNumber ?tripNumber ;
+        t:route ?route ;
+        t:truck ?truck .
+  ?route t:distanceMiles ?distanceMiles .
+  ?truck t:fuelCapacityGallons ?fuelCapacityGallons .
+}
+ORDER BY ?tripNumber
+LIMIT 5

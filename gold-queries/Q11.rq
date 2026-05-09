@@ -1,0 +1,17 @@
+# Q11: For each driver, what is the total distance driven (sum of route distance for completed trips)?
+PREFIX t: <http://www.openlinksw.com/ontology/trucking-ontology#>
+
+SELECT ?firstName ?lastName ?employeeId (SUM(?miles) AS ?totalMiles)
+WHERE {
+  ?trip a t:Trip ;
+        t:status "completed" ;
+        t:driver ?driver ;
+        t:route ?route .
+  ?driver a t:Driver ;
+          t:firstName ?firstName ;
+          t:lastName ?lastName ;
+          t:employeeId ?employeeId .
+  ?route t:distanceMiles ?miles .
+}
+GROUP BY ?firstName ?lastName ?employeeId
+ORDER BY DESC(?totalMiles)

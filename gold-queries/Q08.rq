@@ -1,0 +1,16 @@
+# Q08: Which trucks have had a service ticket with severity 'critical' in the last 90 days?
+PREFIX t: <http://www.openlinksw.com/ontology/trucking-ontology#>
+
+SELECT DISTINCT ?truckNumber ?make ?model
+WHERE {
+  ?st a t:ServiceTicket ;
+      t:severity "critical" ;
+      t:reportedAt ?reported ;
+      t:truck ?truck .
+  ?truck a t:Truck ;
+         t:truckNumber ?truckNumber ;
+         t:make ?make ;
+         t:model ?model .
+  FILTER(?reported >= NOW() - "P90D"^^xsd:duration)
+}
+ORDER BY ?truckNumber

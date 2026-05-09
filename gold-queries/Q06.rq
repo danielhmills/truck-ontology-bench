@@ -1,0 +1,10 @@
+# Q06: For each terminal, how many trucks call it home?
+PREFIX t: <http://www.openlinksw.com/ontology/trucking-ontology#>
+
+SELECT ?terminalName (COUNT(DISTINCT ?truck) AS ?truckCount)
+WHERE {
+  ?truck a t:Truck ; t:homeTerminal ?term .
+  ?term a t:Terminal ; t:name ?terminalName .
+}
+GROUP BY ?terminalName
+ORDER BY DESC(?truckCount)

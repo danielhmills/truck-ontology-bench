@@ -1,0 +1,16 @@
+# Q07: List loads that require an 'H' (hazmat) endorsement and the drivers eligible to haul them.
+PREFIX t: <http://www.openlinksw.com/ontology/trucking-ontology#>
+
+SELECT ?loadNumber ?employeeId ?firstName ?lastName
+WHERE {
+  ?load a t:Load ;
+        t:loadNumber ?loadNumber ;
+        t:requiredEndorsements ?re .
+  ?driver a t:Driver ;
+          t:employeeId ?employeeId ;
+          t:firstName ?firstName ;
+          t:lastName ?lastName ;
+          t:cdlEndorsements ?ce .
+  FILTER(CONTAINS(?re, "H") && CONTAINS(?ce, "H"))
+}
+ORDER BY ?loadNumber ?employeeId
