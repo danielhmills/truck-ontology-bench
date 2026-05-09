@@ -231,6 +231,9 @@ def _invoke_llm(
             "messages": messages,
             "tools": tool_schema,
         }
+        # Force tool call on first turn; allow free-form after data is available
+        if len(queries) == 0:
+            kwargs["tool_choice"] = "required"
         if extra_body:
             kwargs["extra_body"] = extra_body
 
