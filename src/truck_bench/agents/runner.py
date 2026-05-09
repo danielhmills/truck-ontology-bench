@@ -21,8 +21,9 @@ from .instructions import NAKED_AGENT_INSTRUCTIONS, ONTOLOGY_AGENT_INSTRUCTIONS
 
 
 def _normalize(text: str) -> str:
-    t = str(text).lower()
+    t = str(text)
     t = re.sub(r"([a-z])([A-Z])", r"\1 \2", t)
+    t = t.lower()
     t = re.sub(r"[_\-\s/]+", " ", t)
     return re.sub(r"\s+", " ", t).strip()
 

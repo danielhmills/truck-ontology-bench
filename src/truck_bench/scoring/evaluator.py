@@ -74,8 +74,9 @@ def score_numeric(answer: str, gold_value: float, tolerance_pct: float) -> bool:
 
 def normalize_text(s: str) -> str:
     """Fold camelCase, underscores, hyphens, slashes, whitespace to a single space."""
-    s = (s or "").lower()
+    s = (s or "")
     s = re.sub(r"([a-z])([A-Z])", r"\1 \2", s)
+    s = s.lower()
     s = re.sub(r"[_\-/]+", " ", s)
     s = re.sub(r"\s+", " ", s)
     return s.strip()
