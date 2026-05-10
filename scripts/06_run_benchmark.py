@@ -58,12 +58,6 @@ def main() -> None:
         type=Path,
     )
     parser.add_argument(
-        "--query-language",
-        default="sparql",
-        choices=["sparql", "gql"],
-        help="Query language for OntologyAgent: sparql (default) or gql.",
-    )
-    parser.add_argument(
         "--max-iterations",
         type=int,
         default=5,
@@ -103,10 +97,7 @@ def main() -> None:
     def _sparql_query_fn(query: str) -> list[dict]:
         return client.execute_select(query)
 
-    # Pass query language to the runner via environment
-    os.environ["QUERY_LANGUAGE"] = args.query_language
-
-    print(f"\nRunning benchmark (query_language={args.query_language}, max_iterations={args.max_iterations}, timeout={args.timeout}s)...")
+    print(f"\nRunning benchmark (max_iterations={args.max_iterations}, timeout={args.timeout}s)...")
     result = run_benchmark(
         scenarios=scenarios,
         db_path=str(args.db),

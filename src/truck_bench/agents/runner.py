@@ -19,7 +19,6 @@ from typing import Any
 
 from .instructions import (
     NAKED_AGENT_INSTRUCTIONS,
-    ONTOLOGY_AGENT_INSTRUCTIONS,
     ONTOLOGY_AGENT_INSTRUCTIONS_GQL,
 )
 
@@ -86,28 +85,6 @@ def _run_sql(query: str, db_path: str) -> str:
 
 
 # -- OpenAI tool schemas ----------------------------------------------------
-
-_SPARQL_TOOL_SCHEMA = {
-    "type": "function",
-    "function": {
-        "name": "query_sparql",
-        "description": (
-            "Run a SPARQL SELECT query against the truck ontology graph.\n"
-            "PREFIX trucking-ontology: <http://www.openlinksw.com/ontology/trucking-ontology#>\n"
-            "PREFIX : <http://demo.openlinksw.com/trucking-ontology-benchmark#>\n"
-            "Entity classes: trucking-ontology:Terminal, Truck, Trailer, Driver, Customer, Route, Load, Trip, MaintenanceEvent, ServiceTicket, DriverHOSLog.\n"
-            "Object properties are camelCase with _id stripped (e.g. trucking-ontology:driver).\n"
-            "Data properties are camelCase (e.g. trucking-ontology:truckNumber).\n"
-        ),
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "query": {"type": "string", "description": "The SPARQL SELECT query."},
-            },
-            "required": ["query"],
-        },
-    },
-}
 
 _GQL_TOOL_SCHEMA = {
     "type": "function",
@@ -341,13 +318,9 @@ def run_benchmark(
 
     client, model = _build_client()
 
-    query_lang = os.environ.get("QUERY_LANGUAGE", "sparql").lower().strip()
-    if query_lang == "gql":
-        onto_instructions = ONTOLOGY_AGENT_INSTRUCTIONS_GQL
-        onto_tool_schema = _GQL_TOOL_SCHEMA
-    else:
-        onto_instructions = ONTOLOGY_AGENT_INSTRUCTIONS
-        onto_tool_schema = _SPARQL_TOOL_SCHEMA
+    query_lang = "gql"
+    onto_instructions = ONTOLOGY_AGENT_INSTRUCTIONS_GQL
+    onto_tool_schema = _GQL_TOOL_SCHEMA
 
     scenarios_json = json.dumps(scenarios, sort_keys=True, separators=(",", ":"))
     scenarios_sha256 = hashlib.sha256(scenarios_json.encode()).hexdigest()
