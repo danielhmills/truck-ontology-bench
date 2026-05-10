@@ -234,11 +234,13 @@ def _invoke_llm(
                 MessagesPlaceholder(variable_name="agent_scratchpad"),
             ])
 
-            if "sparql" in str(tool_schema):
+            is_ontology = "sparql" in str(tool_schema) or "gql" in str(tool_schema)
+
+            if is_ontology:
 
                 @lc_tool
                 def _t(query: str) -> str:
-                    """Run a SPARQL SELECT query against the truck ontology graph."""
+                    """Run a query against the truck ontology graph."""
                     queries.append(query)
                     r = _run_sparql(query, sparql_query_fn)
                     query_results.append(r)
@@ -309,7 +311,7 @@ def _invoke_llm(
 
             queries.append(query_str)
 
-            if func_name == "query_sparql":
+            if func_name in ("query_sparql", "query_gql"):
                 result = _run_sparql(query_str, sparql_query_fn)
             else:
                 result = _run_sql(query_str, db_path)
