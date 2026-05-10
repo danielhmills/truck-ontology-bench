@@ -1,11 +1,9 @@
 // CQ2: How many trucks call each terminal home?
-// Tests: Truck -> Terminal via truck_home_terminal with a group-by.
+// Tests: Truck -> Terminal via homeTerminal with a group-by.
 GQL
 BASE <http://www.openlinksw.com/ontology/trucking-ontology#>
 USE GRAPH <http://demo.openlinksw.com/trucking-ontology-benchmark/graph>
 MATCH (t::Truck)-[:trucking:homeTerminal]->(term::Terminal)
-RETURN t
-
-RETURN term.:name as terminal_name, COUNT(t) AS truck_count
+RETURN term.name AS terminal_name, COUNT(t) AS truck_count
 GROUP BY terminal_name
 ORDER BY truck_count DESC

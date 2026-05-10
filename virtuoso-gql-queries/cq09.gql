@@ -2,9 +2,12 @@
 // (mirrors scenario Q08).
 // Tests: ServiceTicket -> Truck edge with a property filter on
 // severity and a distinct count.
-MATCH (s:`ServiceTicket`)-[:`service_ticket_truck`]->(t:`Truck`)
+GQL
+BASE <http://www.openlinksw.com/ontology/trucking-ontology#>
+USE GRAPH <http://demo.openlinksw.com/trucking-ontology-benchmark/graph>
+MATCH (s::ServiceTicket)-[:trucking:truck]->(t::Truck)
 WHERE s.severity = 'critical'
-RETURN DISTINCT t.truck_number AS truck_number,
+RETURN DISTINCT t.truckNumber AS truck_number,
                 t.make AS make,
                 t.model AS model
-LIMIT 25;
+LIMIT 25

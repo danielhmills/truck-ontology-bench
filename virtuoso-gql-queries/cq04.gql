@@ -1,15 +1,13 @@
 // CQ4: For each trip, list the driver, truck, and route together.
-// Tests: 3 edges out of Trip (trip_driver, trip_truck, trip_route) in a single query.
-
+// Tests: 3 edges out of Trip (driver, truck, route) in a single query.
 GQL
 BASE <http://www.openlinksw.com/ontology/trucking-ontology#>
 USE GRAPH <http://demo.openlinksw.com/trucking-ontology-benchmark/graph>
-MATCH (tr::Trip)-[:driver]->(d::Driver)
-MATCH (tr)-[:truck]->(tk::Truck)
-MATCH (tr)-[:route]->(r::Route)
+MATCH (tr::Trip)-[:trucking:driver]->(d::Driver)
+MATCH (tr)-[:trucking:truck]->(tk::Truck)
+MATCH (tr)-[:trucking:route]->(r::Route)
 RETURN tr.tripNumber AS trip_number,
        d.employeeId AS driver,
        tk.truckNumber AS truck,
        r.routeName AS route
 LIMIT 25
-

@@ -1,6 +1,9 @@
 // CQ7: Total maintenance spend per truck make.
 // Tests: MaintenanceEvent -> Truck edge + numeric aggregation over a truck attribute.
-MATCH (m:`MaintenanceEvent`)-[:`maintenance_event_truck`]->(t:`Truck`)
-RETURN t.make AS make, SUM(m.cost_usd) AS total_maintenance_spend
+GQL
+BASE <http://www.openlinksw.com/ontology/trucking-ontology#>
+USE GRAPH <http://demo.openlinksw.com/trucking-ontology-benchmark/graph>
+MATCH (m::MaintenanceEvent)-[:trucking:truck]->(t::Truck)
+RETURN t.make AS make, SUM(m.costUsd) AS total_maintenance_spend
 GROUP BY make
-ORDER BY total_maintenance_spend DESC;
+ORDER BY total_maintenance_spend DESC
