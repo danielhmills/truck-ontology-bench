@@ -1,0 +1,6 @@
+// CQ7: Total maintenance spend per truck make.
+// Tests: MaintenanceEvent -> Truck edge + numeric aggregation over a truck attribute.
+MATCH (m:`MaintenanceEvent`)-[:`maintenance_event_truck`]->(t:`Truck`)
+RETURN t.make AS make, SUM(m.cost_usd) AS total_maintenance_spend
+GROUP BY make
+ORDER BY total_maintenance_spend DESC;

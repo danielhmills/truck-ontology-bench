@@ -1,0 +1,20 @@
+// CQ8: Hazmat loads and the drivers currently eligible to haul them
+// (mirrors scenario Q07).
+// Tests: the query can express the semantic intersection of
+// load.required_endorsements and driver.cdl_endorsements. On the
+// current seed both properties are modelled as a JSON array surfaced
+// as a string; the LIKE check is intentional — a Naked agent that
+// treats it as a scalar will get the wrong answer.
+GQL
+BASE <http://www.openlinksw.com/ontology/trucking-ontology#>
+USE GRAPH <http://demo.openlinksw.com/trucking-ontology-benchmark/graph>
+
+MATCH (l::Load)
+MATCH (d::Driver)
+WHERE l.requiredEndorsements LIKE '%H%'
+  AND d.cdlEndorsements LIKE '%H%'
+RETURN l.loadNumber AS load_number,
+       d.employeeId AS driver_id,
+       d.firstName AS first_name,
+       d.lastName AS last_name
+LIMIT 25

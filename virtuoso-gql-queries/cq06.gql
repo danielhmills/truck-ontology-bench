@@ -1,0 +1,6 @@
+// CQ6: For each route, count how many trips ran on it.
+// Tests: Trip -> Route aggregation.
+MATCH (tr:`Trip`)-[:`trip_route`]->(r:`Route`)
+RETURN r.route_name AS route_name, COUNT(tr) AS trip_count
+GROUP BY route_name
+ORDER BY trip_count DESC;

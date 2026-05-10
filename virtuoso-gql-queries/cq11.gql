@@ -1,0 +1,15 @@
+// CQ11: Trucks that have NEVER had a maintenance event
+// (mirrors scenario Q12).
+// Tests: the GQL equivalent of a LEFT JOIN / anti-join — the pattern
+// must exclude trucks that appear on any maintenance_event_truck edge.
+GQL
+BASE <http://www.openlinksw.com/ontology/trucking-ontology#>
+USE GRAPH <http://demo.openlinksw.com/trucking-ontology-benchmark/graph>
+MATCH (t::Truck)
+WHERE NOT EXISTS {
+  MATCH (:`MaintenanceEvent`)-[:`maintenance_event_truck`]->(t)
+}
+RETURN t.truckNumber AS truck_number,
+       t.make AS make,
+       t.model AS model
+LIMIT 25

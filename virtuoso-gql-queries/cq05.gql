@@ -1,0 +1,6 @@
+// CQ5: How many loads per customer industry?
+// Tests: Load -> Customer edge with a group-by on a customer attribute.
+MATCH (l:`Load`)-[:`load_customer`]->(c:`Customer`)
+RETURN c.industry AS industry, COUNT(l) AS load_count
+GROUP BY industry
+ORDER BY load_count DESC;

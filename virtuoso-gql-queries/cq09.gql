@@ -1,0 +1,10 @@
+// CQ9: Trucks with a service ticket of severity 'critical'
+// (mirrors scenario Q08).
+// Tests: ServiceTicket -> Truck edge with a property filter on
+// severity and a distinct count.
+MATCH (s:`ServiceTicket`)-[:`service_ticket_truck`]->(t:`Truck`)
+WHERE s.severity = 'critical'
+RETURN DISTINCT t.truck_number AS truck_number,
+                t.make AS make,
+                t.model AS model
+LIMIT 25;

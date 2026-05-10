@@ -1,0 +1,12 @@
+// CQ10: On-time delivery rate (mirrors scenario Q13).
+// Tests: conditional aggregation split into numerator/denominator —
+// the caller divides in-app to get the rate. The gold definition is
+// "actual_arrival <= delivery_window_end".
+
+GQL
+BASE <http://www.openlinksw.com/ontology/trucking-ontology#>
+USE GRAPH <http://demo.openlinksw.com/trucking-ontology-benchmark/graph>
+MATCH (tr::Trip)-[:load]->(l::Load)
+RETURN COUNT(tr) AS totalDelivered,
+       SUM(CASE WHEN tr.actualArrival <= l.deliveryWindowEnd
+                THEN 1 ELSE 0 END) AS onTimeCount
