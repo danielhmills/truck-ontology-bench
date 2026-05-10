@@ -1,4 +1,0 @@
-// CQ1: How many entity nodes are loaded in the graph?
-// Sanity check after a refresh.
-MATCH (n)
-RETURN COUNT(n) AS total_nodes;

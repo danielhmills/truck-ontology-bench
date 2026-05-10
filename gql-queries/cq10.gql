@@ -1,8 +1,0 @@
-// CQ10: On-time delivery rate (mirrors scenario Q13).
-// Tests: conditional aggregation split into numerator/denominator —
-// the caller divides in-app to get the rate. The gold definition is
-// "actual_arrival <= delivery_window_end".
-MATCH (tr:`Trip`)-[:`trip_load`]->(l:`Load`)
-RETURN COUNT(tr) AS total_delivered,
-       SUM(CASE WHEN tr.actual_arrival <= l.delivery_window_end
-                THEN 1 ELSE 0 END) AS on_time_count;

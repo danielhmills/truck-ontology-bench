@@ -1,5 +1,0 @@
-// CQ3: Which drivers have logged HOS entries?
-// Tests: Driver <- DriverHOSLog edge traversal.
-MATCH (l:`DriverHOSLog`)-[:`driver_hos_log_driver`]->(d:`Driver`)
-RETURN DISTINCT d.first_name AS first_name, d.last_name AS last_name, d.employee_id AS employee_id
-LIMIT 20;

@@ -1,6 +1,0 @@
-// CQ2: How many trucks call each terminal home?
-// Tests: Truck -> Terminal via truck_home_terminal with a group-by.
-MATCH (t:`Truck`)-[:`truck_home_terminal`]->(term:`Terminal`)
-RETURN term.name AS terminal_name, COUNT(t) AS truck_count
-GROUP BY terminal_name
-ORDER BY truck_count DESC;
