@@ -17,7 +17,11 @@ import sqlite3
 from datetime import datetime, timezone
 from typing import Any
 
-from .instructions import NAKED_AGENT_INSTRUCTIONS, ONTOLOGY_AGENT_INSTRUCTIONS
+from .instructions import (
+    NAKED_AGENT_INSTRUCTIONS,
+    ONTOLOGY_AGENT_INSTRUCTIONS,
+    ONTOLOGY_AGENT_INSTRUCTIONS_GQL,
+)
 
 
 def _normalize(text: str) -> str:
@@ -99,6 +103,31 @@ _SPARQL_TOOL_SCHEMA = {
             "type": "object",
             "properties": {
                 "query": {"type": "string", "description": "The SPARQL SELECT query."},
+            },
+            "required": ["query"],
+        },
+    },
+}
+
+_GQL_TOOL_SCHEMA = {
+    "type": "function",
+    "function": {
+        "name": "query_gql",
+        "description": (
+            "Run a GQL (Graph Query Language) query against the truck ontology graph.\n"
+            "Every query MUST start with:\n"
+            "  GQL\n"
+            "  BASE <http://www.openlinksw.com/ontology/trucking-ontology#>\n"
+            "  USE GRAPH <http://demo.openlinksw.com/trucking-ontology-benchmark/graph>\n"
+            "Entity types use ::Type syntax: ::Terminal, ::Truck, ::Driver, ::Route, etc.\n"
+            "Edges use bracket-arrow with trucking: prefix: -[:trucking:driver]->, -[:trucking:homeTerminal]->\n"
+            "Properties use dot notation: t.truckNumber, d.firstName, r.routeName (camelCase).\n"
+            "FK edges drop _id: driver_id field -> trucking:driver edge.\n"
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "The GQL query."},
             },
             "required": ["query"],
         },
@@ -310,6 +339,14 @@ def run_benchmark(
 
     client, model = _build_client()
 
+    query_lang = os.environ.get("QUERY_LANGUAGE", "sparql").lower().strip()
+    if query_lang == "gql":
+        onto_instructions = ONTOLOGY_AGENT_INSTRUCTIONS_GQL
+        onto_tool_schema = _GQL_TOOL_SCHEMA
+    else:
+        onto_instructions = ONTOLOGY_AGENT_INSTRUCTIONS
+        onto_tool_schema = _SPARQL_TOOL_SCHEMA
+
     scenarios_json = json.dumps(scenarios, sort_keys=True, separators=(",", ":"))
     scenarios_sha256 = hashlib.sha256(scenarios_json.encode()).hexdigest()
 
@@ -334,6 +371,7 @@ def run_benchmark(
             "question": question,
             "expected_answer": scenario.get("gold_label", ""),
             "ontology_signals": signals,
+            "query_language": query_lang,
         }
 
         # NakedAgent (SQL)
@@ -369,8 +407,8 @@ def run_benchmark(
         print(f"\n  [OntologyAgent]")
         try:
             ontology_answer, ontology_queries, ontology_results = _invoke_llm(
-                client, model, ONTOLOGY_AGENT_INSTRUCTIONS, question,
-                [_SPARQL_TOOL_SCHEMA], db_path, sparql_query_fn,
+                client, model, onto_instructions, question,
+                [onto_tool_schema], db_path, sparql_query_fn,
                 max_iterations=max_iterations,
             )
         except Exception as exc:
