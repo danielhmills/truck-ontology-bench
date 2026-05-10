@@ -64,12 +64,25 @@ def evaluate_answer(
 
 # -- Tool implementations --------------------------------------------------
 
+_SPARQL_DETECT = re.compile(r"^\s*(PREFIX|SELECT\s|ASK\s|CONSTRUCT\s|DESCRIBE\s)", re.IGNORECASE | re.MULTILINE)
+
+
 def _run_sparql(query: str, sparql_query_fn) -> str:
+    if _SPARQL_DETECT.search(query):
+        return (
+            "ERROR: You sent SPARQL, but this tool only accepts GQL (Graph Query Language).\n"
+            "Rewrite your query in GQL format. Every GQL query must start with:\n"
+            "  GQL\n"
+            "  BASE <http://www.openlinksw.com/ontology/trucking-ontology#>\n"
+            "  USE GRAPH <http://demo.openlinksw.com/trucking-ontology-benchmark/graph>\n"
+            "Use ::Type for entity types (not rdf:type), dot notation for properties (t.truckNumber),\n"
+            "and -[:trucking:edge]-> for relationships.  Do NOT use PREFIX, SELECT, or ?variables."
+        )
     try:
         rows = sparql_query_fn(query)
         return json.dumps(rows, indent=2, ensure_ascii=False)
     except Exception as exc:
-        return f"SPARQL error: {exc}"
+        return f"Query error: {exc}"
 
 
 def _run_sql(query: str, db_path: str) -> str:
