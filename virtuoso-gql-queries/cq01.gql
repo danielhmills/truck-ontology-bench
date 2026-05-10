@@ -1,10 +1,7 @@
 // CQ1: How many entity nodes are loaded in the graph?
-// Sanity check — counts instances of the 11 ontology classes.
+// Sanity check after a refresh.
 GQL
 BASE <http://www.openlinksw.com/ontology/trucking-ontology#>
 USE GRAPH <http://demo.openlinksw.com/trucking-ontology-benchmark/graph>
 MATCH (n)
-WHERE n::Terminal OR n::Truck OR n::Trailer OR n::Driver OR n::Customer
-   OR n::Route OR n::Load OR n::Trip OR n::MaintenanceEvent OR n::ServiceTicket
-   OR n::DriverHOSLog
 RETURN COUNT(n) AS total_nodes
